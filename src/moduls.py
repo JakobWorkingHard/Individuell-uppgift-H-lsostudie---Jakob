@@ -17,7 +17,7 @@ def showing_standard_info(df: pd.DataFrame) -> pd.DataFrame:
 
     series_max = pd.Series(dictionary_max, name="Max")
     series_min = pd.Series(dictionary_min, name="Min")
-    series_mean = pd.Series(dictionary_mean, name="Medel")
+    series_mean = pd.Series(dictionary_mean, name="Mean")
     series_median = pd.Series(dictionary_median, name="Median")
 
     el_finalo_dataframe = pd.DataFrame([series_max, series_min, series_mean, series_median])
@@ -29,9 +29,6 @@ def healthy_vs_diseased_info(df):
 
     df_disease = df[mask_disease]
     df_healthy = df[mask_healthy]
-
-    number_of_disease = mask_disease.sum()
-    number_of_healthy = mask_healthy.sum()
 
     df1 = df_disease.groupby(["smoker", "sex"])["systolic_bp"].mean()
     df2 = df_healthy.groupby(["smoker", "sex"])["systolic_bp"].mean()
@@ -61,33 +58,20 @@ def creating_a_random_data_set_with_disease_frequency(df):
     data = np.random.choice(a=outcome, size=n, p=disease_probability)
     return data
 
-def ci_mean_norma(x, confidence=0.95):
+def actual_frequency_vs_random_generated_frequency(df: pd.DataFrame):
+    actual_frequency = frequency_of_diseased(df)
+    random_dataset = creating_a_random_data_set_with_disease_frequency(df)
+    random_frequency = round(np.mean(random_dataset), 3)
 
-    x = np.asarray(x, dtype=float)
-    mean_x = float(np.mean(x))
-    s = float(np.std(x, ddof=1))
-    n = len(x)
+    dictionary_of_disease_frequency_and_frequency_from_random_dataset = {}
+    dictionary_of_disease_frequency_and_frequency_from_random_dataset["Actual disease frequency"] = actual_frequency
+    dictionary_of_disease_frequency_and_frequency_from_random_dataset["Random dataset disease frequency"] = random_frequency
+    dictionary_of_disease_frequency_and_frequency_from_random_dataset["Difference between actual and random frequency"] = round(abs(actual_frequency - random_frequency), 3)
 
-    z_critical = 1.96
+    df_frequency = pd.Series(dictionary_of_disease_frequency_and_frequency_from_random_dataset)
+    return df_frequency
 
-    margin_of_error = z_critical * (s / np.sqrt(n))
 
-    lo, hi = mean_x - margin_of_error, mean_x + margin_of_error
-
-    return lo, hi, mean_x, s, n
-
-def ci_mean_bootstrap(x, B=10000, confidence=0.95):
-    x = np.asarray(x, dtype=float)
-    n = len(x)
-    boot_means = np.empty(B)
-    for i in range(B):
-        boot_sample = np.random.choice(x, size=n, replace=True)
-        boot_means[i] = np.mean(boot_sample)
-
-    alpha = (1 - confidence) / 2
-    blo, bhi = np.percentile(boot_means, [100*alpha, 100*(1 - alpha)])
-    return float(blo), float(bhi), float(np.mean(x))
-    
 def looking_for_them_smokers(df: pd.DataFrame):
     mask_smokers = df["smoker"] == "Yes"
     mask_non_smokers = df["smoker"] == "No"
@@ -96,4 +80,65 @@ def looking_for_them_smokers(df: pd.DataFrame):
     df_non_smokers = df[mask_non_smokers]
 
     return df_smokers, df_non_smokers
+
+
+class CI_and_bootstrap:
+    def __init__(self, data, confidence=0.95):
+
+        self.data = np.asarray(data, dtype=float)
+        self.confidence = confidence
+        self.n = len(self.data)
+        
+    def ci_mean_norma(self):
+
+        mean_x = float(np.mean(self.data))
+        s = float(np.std(self.data, ddof=1))
+        
+        z_critical = 1.96  # For 95% confidence
+        
+        margin_of_error = z_critical * (s / np.sqrt(self.n))
+        
+        lo = mean_x - margin_of_error
+        hi = mean_x + margin_of_error
+        
+        return lo, hi, mean_x, s, self.n
+    
+    def ci_mean_bootstrap(self, B=10000):
+
+        boot_means = np.empty(B)
+        for i in range(B):
+            boot_sample = np.random.choice(self.data, size=self.n, replace=True)
+            boot_means[i] = np.mean(boot_sample)
+        
+        alpha = (1 - self.confidence) / 2
+        blo, bhi = np.percentile(boot_means, [100*alpha, 100*(1 - alpha)])
+        
+        return float(blo), float(bhi), float(np.mean(self.data))
+    
+    def compare_methods(self, B=10000):
+
+        lo_norm, hi_norm, mean_norm, s, n = self.ci_mean_norma()
+        lo_boot, hi_boot, mean_boot = self.ci_mean_bootstrap(B=B)
+        
+        comparison_df = pd.DataFrame({
+            'Method': ['Normalapproximation', 'Bootstrap'],
+            'Lower limit': [lo_norm, lo_boot],
+            'Upper limit': [hi_norm, hi_boot],
+            'Mean': [mean_norm, mean_boot],
+            'Interval width': [hi_norm - lo_norm, hi_boot - lo_boot]
+        })
+        
+        differences = {
+            'lower_limit': abs(lo_norm - lo_boot),
+            'upper_limit': abs(hi_norm - hi_boot),
+            'mean': abs(mean_norm - mean_boot)
+        }
+        
+        return {
+            'comparison_df': comparison_df,
+            'differences': differences,
+            'normal': {'lo': lo_norm, 'hi': hi_norm, 'mean': mean_norm},
+            'bootstrap': {'lo': lo_boot, 'hi': hi_boot, 'mean': mean_boot}
+        }
+    
 
