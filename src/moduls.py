@@ -1,6 +1,7 @@
 import pandas as pd
 import numpy as np
-np.random.seed(42)
+from scipy import stats
+from scipy import linalg
 
 def showing_standard_info(df: pd.DataFrame) -> pd.DataFrame:
     list_of_some_numeric_categories = ["age", "weight", "height", "systolic_bp", "cholesterol"]
@@ -52,6 +53,7 @@ def frequency_of_diseased(df):
     return round((tu[0].value_counts().sum() / (tu[0].value_counts().sum() + tu[1].value_counts().sum())), 3)
 
 def creating_a_random_data_set_with_disease_frequency(df):
+    np.random.seed(42)
     outcome = [0, 1]
     disease_probability = [1 - frequency_of_diseased(df), frequency_of_diseased(df)]
     n = 1000
@@ -59,6 +61,7 @@ def creating_a_random_data_set_with_disease_frequency(df):
     return data
 
 def actual_frequency_vs_random_generated_frequency(df: pd.DataFrame):
+    np.random.seed(42)
     actual_frequency = frequency_of_diseased(df)
     random_dataset = creating_a_random_data_set_with_disease_frequency(df)
     random_frequency = round(np.mean(random_dataset), 3)
@@ -134,6 +137,13 @@ class CI_and_bootstrap:
             'mean': abs(mean_norm - mean_boot)
         }
         
+        print("=== JÄMFÖRELSE AV KONFIDENSINTERVALL ===\n")
+        print(comparison_df)
+        print("\n=== SKILLNADER MELLAN METODERNA ===")
+        print(f"Difference in lower limit: {differences['lower_limit']:.4f}")
+        print(f"Difference in upper limit: {differences['upper_limit']:.4f}")
+        print(f"Difference in mean: {differences['mean']:.4f}")
+        
         return {
             'comparison_df': comparison_df,
             'differences': differences,
@@ -142,3 +152,57 @@ class CI_and_bootstrap:
         }
     
 
+
+def checking_power_of_that_t_test(n_experiment_group,
+                                  n_control_group,
+                                  std_experiment_group,
+                                  std_control_group,
+                                  diff_to_find,
+                                  alpha = 0.05,
+                                  n_simulations = 1000,
+                                  alternative = "greater"
+                                  ):
+    
+    mean_control = 120    
+    mean_experiment = mean_control + diff_to_find
+    significant_results = 0
+    np.random.seed(42)
+    for _ in range(n_simulations):
+
+        experiment_data = np.random.normal(loc=mean_experiment, scale=std_experiment_group, size=n_experiment_group)
+        control_data = np.random.normal(loc=mean_control, scale=std_control_group, size=n_control_group)
+        if alternative == "greater":
+            t_stat, p_value = stats.ttest_ind(
+                a=experiment_data, 
+                b=control_data, 
+                equal_var=False,
+                alternative='greater'
+            )
+        elif alternative == "less":
+                 t_stat, p_value = stats.ttest_ind(
+                a=experiment_data, 
+                b=control_data, 
+                equal_var=False,
+                alternative='less'
+            )
+        else:
+            t_stat, p_value = stats.ttest_ind(
+                a=experiment_data, 
+                b=control_data, 
+                equal_var=False,
+                alternative="two-sided"
+            )
+
+        if p_value < alpha:
+            significant_results += 1
+
+    power = significant_results / n_simulations
+
+    print(f"--- Simulation Results ---")
+    print(f"Assumed true difference (Effect size): {diff_to_find} mmHg")
+    print(f"Sample sizes: Sick={n_experiment_group}, Healthy={n_control_group}")
+    print(f"Significance level (Alpha): {alpha}")
+    print(f"\nNumber of significant results: {significant_results} of {n_simulations}")
+    print(f"Calculated power (Power): {power:.3f}")
+    print("\n")
+    return power, diff_to_find
