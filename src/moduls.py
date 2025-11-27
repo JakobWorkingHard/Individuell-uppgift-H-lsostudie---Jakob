@@ -4,6 +4,14 @@ from scipy import stats
 from scipy import linalg
 
 def showing_standard_info(df: pd.DataFrame) -> pd.DataFrame:
+    """
+    Docstring for showing_standard_info
+    
+    :param df: Creates a dataframe of max, min, mean and median of age, weight, height, systolic_bp and cholesterol.
+    :type df: pd.DataFrame
+    :return: A dataframe of max, min, mean and median.
+    :rtype: DataFrame
+    """
     list_of_some_numeric_categories = ["age", "weight", "height", "systolic_bp", "cholesterol"]
     dictionary_max = {}
     dictionary_min = {}
@@ -25,6 +33,10 @@ def showing_standard_info(df: pd.DataFrame) -> pd.DataFrame:
     return el_finalo_dataframe
 
 def healthy_vs_diseased_info(df):
+    """
+    This function takes in your dataframe and returns two dataframes, one only with information of diseased and if they are smokers/non smokers
+    and male/female, the other dataframe is with non diseased and if they are smokers/non smokers and male/female.
+    """
     mask_disease = df["disease"] > 0
     mask_healthy = df["disease"] < 1
 
@@ -37,6 +49,11 @@ def healthy_vs_diseased_info(df):
     return df1, df2
 
 def healthy_vs_diseased(df):
+    """
+    This function takes in your dataframes and returns two dataframes, one with only diseased and one with only non diseased.
+
+    The return of the two dataframes are in a tuple.
+    """
     mask_disease = df["disease"] > 0
     mask_healthy = df["disease"] < 1
 
@@ -46,13 +63,26 @@ def healthy_vs_diseased(df):
     return df_disease, df_healthy
 
 def frequency_of_diseased(df):
+    """
+    Input: Your dataframe
+
+    Returns: frequency of diseased
+    """
     tu = healthy_vs_diseased(df)
     tu[0].value_counts().sum()
     tu[1].value_counts().sum()
 
     return round((tu[0].value_counts().sum() / (tu[0].value_counts().sum() + tu[1].value_counts().sum())), 3)
 
+
 def creating_a_random_data_set_with_disease_frequency(df):
+    """
+    This function creates a random dataserie of frequency of diseased, using the actual frequency of diseased.
+
+    Input: Your dataframe
+
+    Returns: A random created serie of disease frequency
+    """
     np.random.seed(42)
     outcome = [0, 1]
     disease_probability = [1 - frequency_of_diseased(df), frequency_of_diseased(df)]
@@ -61,6 +91,13 @@ def creating_a_random_data_set_with_disease_frequency(df):
     return data
 
 def actual_frequency_vs_random_generated_frequency(df: pd.DataFrame):
+    """
+    This function compares the actual frequency with the randomized frequency.
+
+    Input: Your dataframe
+
+    Returns: a serie of actual frequency, random generated frequency and difference of the actual and the randomized frequency.
+    """
     np.random.seed(42)
     actual_frequency = frequency_of_diseased(df)
     random_dataset = creating_a_random_data_set_with_disease_frequency(df)
@@ -76,6 +113,13 @@ def actual_frequency_vs_random_generated_frequency(df: pd.DataFrame):
 
 
 def looking_for_them_smokers(df: pd.DataFrame):
+    """
+    This function looks for them smokers, those who smokes. It doesn't care about how much you smoke, only if you smoke or not.
+
+    Input: Your dataframe
+
+    Returns: Two dataframes, one with smokers and one with non smokers
+    """
     mask_smokers = df["smoker"] == "Yes"
     mask_non_smokers = df["smoker"] == "No"
 
@@ -86,14 +130,18 @@ def looking_for_them_smokers(df: pd.DataFrame):
 
 
 class CI_and_bootstrap:
-    def __init__(self, data, confidence=0.95):
-
+    def __init__(self, data: pd.DataFrame, confidence=0.95):
+        """
+        This initializes the self, transforming your dataframe into an array, and also takes in the length of your array.
+        """
         self.data = np.asarray(data, dtype=float)
         self.confidence = confidence
         self.n = len(self.data)
         
     def ci_mean_norma(self):
-
+        """
+        Confidence interval using normal approximation
+        """
         mean_x = float(np.mean(self.data))
         s = float(np.std(self.data, ddof=1))
         
@@ -107,7 +155,11 @@ class CI_and_bootstrap:
         return lo, hi, mean_x, s, self.n
     
     def ci_mean_bootstrap(self, B=10000):
+        """
+        Confidence interval using bootstrap
 
+        Input: Number of bootstrap-iterations
+        """
         boot_means = np.empty(B)
         for i in range(B):
             boot_sample = np.random.choice(self.data, size=self.n, replace=True)
@@ -119,7 +171,14 @@ class CI_and_bootstrap:
         return float(blo), float(bhi), float(np.mean(self.data))
     
     def compare_methods(self, B=10000):
+        """
+        This function compares the confidence intervals of normal approximation and bootstrap.
 
+        Input: Number of bootstrap-iterations
+
+        Returns: A dictionary of: comparison_df(dataframe), differences(dictionary), confidence interval of normal approx (dictionary),
+        confidence interval of bootstrap (dictionary)
+        """
         lo_norm, hi_norm, mean_norm, s, n = self.ci_mean_norma()
         lo_boot, hi_boot, mean_boot = self.ci_mean_bootstrap(B=B)
         
@@ -137,9 +196,9 @@ class CI_and_bootstrap:
             'mean': abs(mean_norm - mean_boot)
         }
         
-        print("=== JÄMFÖRELSE AV KONFIDENSINTERVALL ===\n")
+        print("--Comparing results--\n")
         print(comparison_df)
-        print("\n=== SKILLNADER MELLAN METODERNA ===")
+        print("\n--Differences between methods--")
         print(f"Difference in lower limit: {differences['lower_limit']:.4f}")
         print(f"Difference in upper limit: {differences['upper_limit']:.4f}")
         print(f"Difference in mean: {differences['mean']:.4f}")
@@ -153,16 +212,20 @@ class CI_and_bootstrap:
     
 
 
-def checking_power_of_that_t_test(n_experiment_group,
-                                  n_control_group,
-                                  std_experiment_group,
-                                  std_control_group,
-                                  diff_to_find,
+def checking_power_of_that_t_test(n_experiment_group: int,
+                                  n_control_group: int,
+                                  std_experiment_group: float,
+                                  std_control_group: float,
+                                  diff_to_find: float,
                                   alpha = 0.05,
                                   n_simulations = 1000,
                                   alternative = "greater"
                                   ):
-    
+    """
+    This function checks the power of a t-test using your inputs.
+
+    Returns: power of your t-test and the difference your t-test was supposed to find (your input)
+    """
     mean_control = 120    
     mean_experiment = mean_control + diff_to_find
     significant_results = 0
