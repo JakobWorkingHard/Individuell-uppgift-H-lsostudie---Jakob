@@ -1,3 +1,6 @@
+# 📜 Introduction
+This project constitutes a mandatory component of the curriculum for the Data Scientist program. The core objective of the assignment was to conduct a comprehensive exploratory data analysis on a dataset comprising 800 data points across 8 distinct variables. The primary goal of this analysis was to identify underlying trends, correlations, and significant patterns within the observed data.
+
 # Table of Contents
 * Descriptive statistics and multiple visualizations;
 * Simulations (incl. probabilities and confidence intervals);
@@ -51,3 +54,5 @@ Create a virtual environment to manage dependencies:
 Navigate into the cloned project directory and install the required packages using the provided file:
 **cd health_study_project**
 **python -m pip install -r requirements.txt**
+
+Sit back and enjoy the ride of some beautiful analysis!
